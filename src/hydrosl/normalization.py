@@ -174,6 +174,7 @@ def normalize(parsed_sheets: Iterable[ParsedSheet]) -> NormalizedDataset:
                         source_row=record.source_row,
                         season=record.season,
                         text_value=metric.text_value,
+                        source_field=metric.source_field,
                         attributes=record.attributes,
                     )
                 )
@@ -192,6 +193,10 @@ def normalize(parsed_sheets: Iterable[ParsedSheet]) -> NormalizedDataset:
                         source_section=record.section,
                         source_row=record.source_row,
                         season=record.season,
+                        observed_date=record.observed_date,
+                        report_date=record.report_date,
+                        source_field=metric.source_field,
+                        attributes=record.attributes,
                     )
                 )
 

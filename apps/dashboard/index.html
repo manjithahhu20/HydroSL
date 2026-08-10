@@ -65,6 +65,11 @@
             <div class="stat-value stat-date" id="latest-report">-</div>
             <div class="stat-detail">Latest report date in the warehouse</div>
           </article>
+          <article class="stat-card alert-card">
+            <div class="stat-label">Reported spilling</div>
+            <div class="stat-value" id="spilling-count">-</div>
+            <div class="stat-detail">Assets reporting an active spill</div>
+          </article>
         </section>
 
         <section class="content-grid">
@@ -81,6 +86,7 @@
                     <option value="">All types</option>
                     <option value="major_reservoir">Major reservoirs</option>
                     <option value="medium_reservoir">Medium reservoirs</option>
+                    <option value="additional_reservoir">Additional reservoirs</option>
                     <option value="anicut">Anicuts</option>
                     <option value="other_tank">Other tanks</option>
                     <option value="small_tank">Small tanks</option>
@@ -100,6 +106,9 @@
                     <th>Type</th>
                     <th>Range</th>
                     <th>District</th>
+                    <th>Storage %</th>
+                    <th>Water depth</th>
+                    <th>Status</th>
                     <th>Coordinates</th>
                   </tr>
                 </thead>
@@ -117,15 +126,43 @@
                 <h2 id="detail-name">Nothing selected</h2>
               </div>
             </div>
-            <p class="detail-placeholder" id="detail-placeholder">Select an asset to inspect its normalized observations and source context.</p>
+            <p class="detail-placeholder" id="detail-placeholder">Select an asset to inspect current measurements, historical trends, seasonal references, operations, and source rows.</p>
             <div id="detail-content" class="hidden">
               <div class="detail-meta" id="detail-meta"></div>
-              <div class="chart-heading">
-                <span>Effective storage percentage</span>
-                <span id="detail-latest">-</span>
+              <div class="detail-tabs" role="tablist">
+                <button class="detail-tab active" data-tab="current">Current</button>
+                <button class="detail-tab" data-tab="history">History</button>
+                <button class="detail-tab" data-tab="seasonal">Yala / Maha</button>
+                <button class="detail-tab" data-tab="operations">Operations</button>
+                <button class="detail-tab" data-tab="source">Source</button>
               </div>
-              <svg id="detail-chart" viewBox="0 0 360 130" role="img" aria-label="Effective storage percentage history"></svg>
-              <div class="detail-source" id="detail-source"></div>
+              <section class="detail-view" data-view="current">
+                <div class="metric-grid" id="current-metrics"></div>
+              </section>
+              <section class="detail-view hidden" data-view="history">
+                <div class="chart-controls">
+                  <label>Metric <select id="metric-select"></select></label>
+                  <label>Season <select id="history-season"><option value="">All</option><option>Yala</option><option>Maha</option></select></label>
+                  <label class="check-label"><input id="show-future" type="checkbox" /> Show future source rows</label>
+                </div>
+                <div class="chart-heading">
+                  <span id="history-label">Select a numeric metric</span>
+                  <span id="detail-latest">-</span>
+                </div>
+                <svg id="detail-chart" viewBox="0 0 600 190" role="img" aria-label="Selected metric history"></svg>
+              </section>
+              <section class="detail-view hidden" data-view="seasonal">
+                <div class="section-note">Seasonal reference values compare active storage with the source's Yala and Maha reference periods.</div>
+                <div class="table-wrap compact-table"><table><thead><tr><th>Season</th><th>Reference</th><th>Value</th><th>Date</th><th>Source</th></tr></thead><tbody id="seasonal-table"></tbody></table></div>
+              </section>
+              <section class="detail-view hidden" data-view="operations">
+                <div class="metric-grid" id="operation-metrics"></div>
+                <div class="table-wrap compact-table"><table><thead><tr><th>Date</th><th>Source</th><th>Remarks</th></tr></thead><tbody id="operation-records"></tbody></table></div>
+              </section>
+              <section class="detail-view hidden" data-view="source">
+                <div class="detail-source" id="detail-source"></div>
+                <div class="table-wrap compact-table"><table><thead><tr><th>Sheet</th><th>Section</th><th>Row</th><th>Observed</th><th>Raw fields</th></tr></thead><tbody id="source-records"></tbody></table></div>
+              </section>
             </div>
           </aside>
         </section>
@@ -143,12 +180,27 @@
             <div class="quality-rule"><span>Raw values retained</span><strong>Yes</strong></div>
             <div class="quality-rule"><span>Source rows traceable</span><strong>Yes</strong></div>
             <div class="quality-rule"><span>Operational warning service</span><strong>No</strong></div>
+            <div class="table-wrap compact-table issue-table"><table><thead><tr><th>Sheet</th><th>Field</th><th>Raw value</th><th>Message</th></tr></thead><tbody id="issues-table"></tbody></table></div>
           </article>
           <article class="panel next-panel">
             <span class="eyebrow">Designed to expand</span>
             <h2>Next layers can plug in here.</h2>
             <p>Drought indices, crop water demand, river gauges, and forecasts will consume the same asset and observation contracts.</p>
             <a href="../../docs/architecture.md" class="text-link">Read the project docs <span>-></span></a>
+          </article>
+        </section>
+
+        <section class="catalog-grid">
+          <article class="panel summary-panel">
+            <div class="panel-heading compact">
+              <div><span class="eyebrow">Regional inventory</span><h2>Range summaries</h2></div>
+              <span class="quality-count" id="summary-count">-</span>
+            </div>
+            <div class="table-wrap compact-table"><table><thead><tr><th>Sheet</th><th>Scope</th><th>Tanks</th><th>Gross</th><th>Effective</th><th>Filled</th></tr></thead><tbody id="summaries-table"></tbody></table></div>
+          </article>
+          <article class="panel source-panel">
+            <div class="panel-heading compact"><div><span class="eyebrow">Source catalogue</span><h2>Workbook coverage</h2></div></div>
+            <div id="source-catalogue" class="source-catalogue"></div>
           </article>
         </section>
       </main>

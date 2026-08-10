@@ -21,3 +21,8 @@ archive retains these values and the parser emits quality issues.
 
 The source is a published workbook used with permission. The code license does
 not replace the source owner's data terms.
+
+Dashboard read models expose structured current values, daily seasonal history,
+regional summaries, operational records, source provenance, and data-quality
+issues. Rows dated after the ingestion fetch date are retained but hidden from
+default current and history views.

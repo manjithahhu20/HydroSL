@@ -41,6 +41,7 @@ NO,RANGE,STORAGE (Acft),,,,,
         self.assertEqual(parsed.records[0].metrics["gross_storage_acft"].value, 71956.0)
         self.assertEqual(parsed.records[1].metrics["spilling"].text_value, "Yes")
         self.assertEqual(len(parsed.summaries), 1)
+        self.assertEqual(parsed.summaries[0].values["scope"], "ANURADAPURA")
 
     def test_mixed_sheet_keeps_asset_sections(self) -> None:
         text = """IRRIGATION DEPARTMENT,
@@ -78,6 +79,27 @@ No.,Mediaum Tank,Division,Gross Capacity (Acft),Dead Storage (Acft),FSL (mMSL),G
         self.assertEqual(record.observed_date, date(2026, 4, 1))
         self.assertEqual(set(record.seasonal_references), {"2022", "2026"})
         self.assertEqual(record.metrics["active_storage_acft"].value, 104176.0)
+
+    def test_small_tank_two_row_header_and_idat_units(self) -> None:
+        mixed = """IRRIGATION DEPARTMENT,
+No.,Mediaum Tank,Division,,,,,
+,,,,Details of the tank,,,,Present storage,
+1,Tank C,Colombo,,50,5,12.4,100,20
+"""
+        mixed_spec = SheetSpec("Sheet3", "4", "mixed")
+        mixed_parsed = parse_csv_text(mixed_spec, mixed)
+        small = mixed_parsed.records[0]
+        self.assertEqual(small.metrics["gross_capacity_acft"].value, 50.0)
+        self.assertEqual(small.metrics["present_storage_acft"].value, 20.0)
+
+        idat = """Date,Reservoir Name,Water Depth(m),Gross Storage(Acft),Spilling (Y/N)
+10-Aug-26,Tank C,13.60,100,No
+"""
+        idat_spec = SheetSpec("IDAT", "5", "idat", "major_reservoir")
+        idat_parsed = parse_csv_text(idat_spec, idat)
+        self.assertEqual(idat_parsed.report_date, date(2026, 8, 10))
+        self.assertEqual(idat_parsed.records[0].report_date, date(2026, 8, 10))
+        self.assertEqual(idat_parsed.records[0].metrics["water_depth_m"].unit, "m")
 
 
 class NormalizationTests(unittest.TestCase):
