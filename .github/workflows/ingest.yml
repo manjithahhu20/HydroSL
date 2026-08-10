@@ -29,12 +29,23 @@ jobs:
       - name: Export dashboard read models
         run: hydrosl export --warehouse data/warehouse --output apps/dashboard/data
 
+      - name: Detect Blob credentials
+        id: blob
+        env:
+          BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
+        run: |
+          if [ -n "$BLOB_READ_WRITE_TOKEN" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Install Blob publisher
-        if: ${{ secrets.BLOB_READ_WRITE_TOKEN != '' }}
+        if: steps.blob.outputs.configured == 'true'
         run: npm ci
 
       - name: Publish dashboard data to Vercel Blob
-        if: ${{ secrets.BLOB_READ_WRITE_TOKEN != '' }}
+        if: steps.blob.outputs.configured == 'true'
         env:
           BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
         run: node scripts/publish_blob.mjs
