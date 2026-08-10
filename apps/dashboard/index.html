@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>HydroSL | Water Resource Observatory</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <span class="brand-mark">H</span>
+          <div>
+            <strong>HydroSL</strong>
+            <span>Water resource observatory</span>
+          </div>
+        </div>
+        <div class="sidebar-note">
+          <span class="eyebrow">First release</span>
+          <p>Reservoir, tank, and anicut conditions from Sri Lanka's published water reports.</p>
+        </div>
+        <nav>
+          <a class="active" href="#overview">Overview</a>
+          <a href="#assets">Assets</a>
+          <a href="#data-quality">Data quality</a>
+        </nav>
+        <div class="sidebar-footer">
+          <span class="status-dot"></span>
+          <span id="connection-status">Waiting for API</span>
+        </div>
+      </aside>
+
+      <main class="main-content">
+        <header class="topbar">
+          <div>
+            <span class="eyebrow">Sri Lanka / daily reporting</span>
+            <h1>Water conditions, without the spreadsheet maze.</h1>
+            <p class="lede">A traceable view of reservoir storage, water levels, rainfall, and operational notes.</p>
+          </div>
+          <div class="source-chip">
+            <span class="source-pulse"></span>
+            <span>Published source mirror</span>
+          </div>
+        </header>
+
+        <section id="overview" class="stats-grid" aria-label="Overview statistics">
+          <article class="stat-card stat-card-wide">
+            <div class="stat-label">Tracked assets</div>
+            <div class="stat-value" id="asset-count">-</div>
+            <div class="stat-detail" id="asset-breakdown">Awaiting latest ingestion</div>
+          </article>
+          <article class="stat-card">
+            <div class="stat-label">Effective storage</div>
+            <div class="stat-value" id="effective-storage">-</div>
+            <div class="stat-detail">Acft, latest available readings</div>
+          </article>
+          <article class="stat-card accent-card">
+            <div class="stat-label">Average filled</div>
+            <div class="stat-value" id="average-filled">-</div>
+            <div class="stat-detail">Across assets with a percentage</div>
+          </article>
+          <article class="stat-card">
+            <div class="stat-label">Report context</div>
+            <div class="stat-value stat-date" id="latest-report">-</div>
+            <div class="stat-detail">Latest report date in the warehouse</div>
+          </article>
+        </section>
+
+        <section class="content-grid">
+          <article class="panel asset-panel" id="assets">
+            <div class="panel-heading">
+              <div>
+                <span class="eyebrow">Asset explorer</span>
+                <h2>Water assets</h2>
+              </div>
+              <div class="filters">
+                <label>
+                  <span class="sr-only">Asset type</span>
+                  <select id="asset-type">
+                    <option value="">All types</option>
+                    <option value="major_reservoir">Major reservoirs</option>
+                    <option value="medium_reservoir">Medium reservoirs</option>
+                    <option value="anicut">Anicuts</option>
+                    <option value="other_tank">Other tanks</option>
+                    <option value="small_tank">Small tanks</option>
+                  </select>
+                </label>
+                <label>
+                  <span class="sr-only">Search assets</span>
+                  <input id="asset-search" type="search" placeholder="Search assets" />
+                </label>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Asset</th>
+                    <th>Type</th>
+                    <th>Range</th>
+                    <th>District</th>
+                    <th>Coordinates</th>
+                  </tr>
+                </thead>
+                <tbody id="asset-table">
+                  <tr><td colspan="5" class="empty-state">Run an ingestion job to populate the explorer.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+
+          <aside class="panel detail-panel" id="asset-detail">
+            <div class="panel-heading compact">
+              <div>
+                <span class="eyebrow">Selected asset</span>
+                <h2 id="detail-name">Nothing selected</h2>
+              </div>
+            </div>
+            <p class="detail-placeholder" id="detail-placeholder">Select an asset to inspect its normalized observations and source context.</p>
+            <div id="detail-content" class="hidden">
+              <div class="detail-meta" id="detail-meta"></div>
+              <div class="chart-heading">
+                <span>Effective storage percentage</span>
+                <span id="detail-latest">-</span>
+              </div>
+              <svg id="detail-chart" viewBox="0 0 360 130" role="img" aria-label="Effective storage percentage history"></svg>
+              <div class="detail-source" id="detail-source"></div>
+            </div>
+          </aside>
+        </section>
+
+        <section class="bottom-grid" id="data-quality">
+          <article class="panel quality-panel">
+            <div class="panel-heading compact">
+              <div>
+                <span class="eyebrow">Traceability</span>
+                <h2>Data quality</h2>
+              </div>
+              <span class="quality-count" id="quality-count">-</span>
+            </div>
+            <p>Source errors, ambiguous values, and parser warnings remain visible instead of being silently dropped.</p>
+            <div class="quality-rule"><span>Raw values retained</span><strong>Yes</strong></div>
+            <div class="quality-rule"><span>Source rows traceable</span><strong>Yes</strong></div>
+            <div class="quality-rule"><span>Operational warning service</span><strong>No</strong></div>
+          </article>
+          <article class="panel next-panel">
+            <span class="eyebrow">Designed to expand</span>
+            <h2>Next layers can plug in here.</h2>
+            <p>Drought indices, crop water demand, river gauges, and forecasts will consume the same asset and observation contracts.</p>
+            <a href="../../docs/architecture.md" class="text-link">Read the project docs <span>-></span></a>
+          </article>
+        </section>
+      </main>
+    </div>
+    <script>
+      window.HYDROSL_API_BASE = window.HYDROSL_API_BASE || "http://127.0.0.1:8000";
+    </script>
+    <script src="app.js" defer></script>
+  </body>
+</html>

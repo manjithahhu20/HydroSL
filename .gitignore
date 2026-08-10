@@ -1,0 +1,20 @@
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+
+# Runtime data. Small, curated fixtures belong in data/samples/.
+data/raw/
+data/warehouse/
+data/runs/
+
+# Local tooling and editor files.
+.env
+.env.*
+.idea/
+.vscode/
+*.log
