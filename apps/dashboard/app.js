@@ -1,6 +1,8 @@
 (function () {
-  const apiBase = (window.HYDROSL_API_BASE || "http://127.0.0.1:8000").replace(/\/$/, "");
+  const apiBase = (window.HYDROSL_API_BASE || "").replace(/\/$/, "");
+  const dataBase = (window.HYDROSL_DATA_BASE || "./data").replace(/\/$/, "");
   const state = { assets: [], selected: null };
+  let staticManifest = null;
 
   const $ = (id) => document.getElementById(id);
   const formatNumber = (value, digits = 0) => {
@@ -9,10 +11,70 @@
   };
   const assetLabel = (type) => String(type || "unknown").replaceAll("_", " ");
 
-  async function get(path) {
-    const response = await fetch(`${apiBase}${path}`);
+  async function fetchJson(url) {
+    const response = await fetch(url);
     if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
     return response.json();
+  }
+
+  function dataUrl(relativePath) {
+    const base = new URL(`${dataBase}/`, window.location.href);
+    return new URL(relativePath, base).toString();
+  }
+
+  function assetFileKey(assetId) {
+    return String(assetId).replaceAll(":", "__");
+  }
+
+  async function getStaticManifest() {
+    if (!staticManifest) staticManifest = await fetchJson(dataUrl("manifest.json"));
+    return staticManifest;
+  }
+
+  async function getStatic(path) {
+    const request = new URL(path, window.location.href);
+    if (request.pathname === "/api/v1/overview") {
+      return fetchJson(dataUrl("overview.json"));
+    }
+    if (request.pathname === "/api/v1/assets") {
+      return fetchJson(dataUrl("assets.json"));
+    }
+    if (request.pathname === "/api/v1/issues") {
+      const quality = await fetchJson(dataUrl("quality.json"));
+      return quality.issues || [];
+    }
+    if (request.pathname === "/api/v1/observations") {
+      const assetId = request.searchParams.get("asset_id");
+      if (!assetId) return [];
+      const data = await fetchJson(dataUrl(`assets/${assetFileKey(assetId)}.json`));
+      let observations = data.observations || [];
+      const includeFuture = request.searchParams.get("include_future") === "true";
+      if (!includeFuture) {
+        const manifest = await getStaticManifest();
+        const cutoff = String(manifest.source_fetched_at || "").slice(0, 10);
+        if (cutoff) observations = observations.filter((item) => !item.observed_date || item.observed_date <= cutoff);
+      }
+      const metric = request.searchParams.get("metric_code");
+      const from = request.searchParams.get("from");
+      const to = request.searchParams.get("to");
+      if (metric) observations = observations.filter((item) => item.metric_code === metric);
+      if (from) observations = observations.filter((item) => !item.observed_date || item.observed_date >= from);
+      if (to) observations = observations.filter((item) => !item.observed_date || item.observed_date <= to);
+      observations.sort((left, right) => String(left.observed_date || "").localeCompare(String(right.observed_date || "")));
+      const limit = Number(request.searchParams.get("limit") || 5000);
+      return observations.slice(0, limit);
+    }
+    if (request.pathname.startsWith("/api/v1/assets/")) {
+      const assetId = decodeURIComponent(request.pathname.slice("/api/v1/assets/".length));
+      const data = await fetchJson(dataUrl(`assets/${assetFileKey(assetId)}.json`));
+      return data.asset;
+    }
+    throw new Error(`No static read model for ${request.pathname}`);
+  }
+
+  async function get(path) {
+    if (apiBase) return fetchJson(`${apiBase}${path}`);
+    return getStatic(path);
   }
 
   function setConnection(ok, message) {
@@ -119,7 +181,7 @@
       state.assets = assets;
       renderOverview(overview);
       renderAssets();
-      setConnection(true, "API connected");
+      setConnection(true, apiBase ? "API connected" : "Published data connected");
     } catch (error) {
       setConnection(false, "API unavailable");
       $("asset-table").innerHTML = `<tr><td colspan="5" class="empty-state">${escapeHtml(error.message)}. Start the HydroSL API and run ingestion.</td></tr>`;

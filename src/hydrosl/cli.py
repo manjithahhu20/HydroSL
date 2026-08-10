@@ -11,6 +11,7 @@ from .archive import archive_snapshot, utc_now, write_json, write_warehouse
 from .models import ParseIssue, ParsedSheet, SheetSpec, SnapshotInfo
 from .normalization import normalize
 from .parsing import parse_csv_text
+from .read_models import export_read_models
 from .sheets import PUBLISHED_WORKBOOK_URL, SHEET_BY_NAME, SHEET_SPECS
 from .source import GoogleSheetsSource, SourceFetchError
 
@@ -207,6 +208,12 @@ def _build_parser() -> argparse.ArgumentParser:
     parse_parser.add_argument("--output", type=Path, default=Path("data/warehouse"))
     parse_parser.add_argument("--sheet", action="append", dest="sheets")
 
+    export_parser = subparsers.add_parser(
+        "export", help="create compact static dashboard read models"
+    )
+    export_parser.add_argument("--warehouse", type=Path, default=Path("data/warehouse"))
+    export_parser.add_argument("--output", type=Path, default=Path("apps/dashboard/data"))
+
     serve_parser = subparsers.add_parser("serve", help="start the optional FastAPI service")
     serve_parser.add_argument("--warehouse", type=Path, default=Path("data/warehouse"))
     serve_parser.add_argument("--host", default="127.0.0.1")
@@ -233,6 +240,10 @@ def main(argv: Sequence[str] | None = None) -> None:
         raise SystemExit(
             parse_archived(output=args.output, run_id=args.run_id, specs=_selected_specs(args.sheets))
         )
+    if args.command == "export":
+        counts = export_read_models(args.warehouse, args.output)
+        print(json.dumps(counts, indent=2))
+        return
     if args.command == "list-sheets":
         for spec in SHEET_SPECS:
             print(f"{spec.name}\t{spec.gid}\t{spec.parser}\t{spec.season or ''}")

@@ -26,6 +26,19 @@ jobs:
       - name: Fetch and normalize workbook
         run: hydrosl ingest --output data/warehouse
 
+      - name: Export dashboard read models
+        run: hydrosl export --warehouse data/warehouse --output apps/dashboard/data
+
+      - name: Install Blob publisher
+        if: ${{ secrets.BLOB_READ_WRITE_TOKEN != '' }}
+        run: npm ci
+
+      - name: Publish dashboard data to Vercel Blob
+        if: ${{ secrets.BLOB_READ_WRITE_TOKEN != '' }}
+        env:
+          BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
+        run: node scripts/publish_blob.mjs
+
       - name: Upload warehouse artifact
         uses: actions/upload-artifact@v4
         with:

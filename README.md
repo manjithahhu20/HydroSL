@@ -35,6 +35,12 @@ Run an ingestion job:
 hydrosl ingest --output data/warehouse
 ```
 
+Create compact files for a static dashboard deployment:
+
+```text
+hydrosl export --warehouse data/warehouse --output apps/dashboard/data
+```
+
 The command archives raw sheet snapshots below `data/warehouse/raw/` and
 writes normalized JSON Lines files below `data/warehouse/`.
 
@@ -52,6 +58,8 @@ python -m http.server 5173
 ```
 
 Open `http://localhost:5173/apps/dashboard/`.
+
+Vercel deployment instructions are in [`docs/deployment.md`](docs/deployment.md).
 
 ## Architecture
 

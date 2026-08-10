@@ -1,0 +1,11 @@
+{
+  "name": "hydrosl-dashboard",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build_dashboard.mjs"
+  },
+  "dependencies": {
+    "@vercel/blob": "^2.7.0"
+  }
+}

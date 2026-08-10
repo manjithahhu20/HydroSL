@@ -3,12 +3,14 @@ from __future__ import annotations
 import tempfile
 import unittest
 from datetime import date
+import json
 from pathlib import Path
 
 from hydrosl.archive import archive_snapshot
 from hydrosl.models import MetricValue, SheetSpec, SourceRecord
 from hydrosl.normalization import normalize
 from hydrosl.parsing import parse_csv_text, parse_number
+from hydrosl.read_models import export_read_models
 from hydrosl.sheets import SHEET_SPECS
 
 
@@ -134,6 +136,35 @@ class ArchiveTests(unittest.TestCase):
             self.assertTrue(Path(info.path).exists())
             self.assertEqual(info.bytes, len("a,b\n1,2\n".encode()))
             self.assertEqual(len(info.sha256), 64)
+
+    def test_read_models_export_dashboard_files(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            warehouse = Path(directory) / "warehouse"
+            output = Path(directory) / "dashboard-data"
+            warehouse.mkdir()
+            (warehouse / "manifest.json").write_text(
+                json.dumps({"run_id": "run", "fetched_at": "2026-08-10T00:00:00+00:00"}),
+                encoding="utf-8",
+            )
+            (warehouse / "assets.jsonl").write_text(
+                json.dumps({"asset_id": "major_reservoir:test", "canonical_name": "Test"}) + "\n",
+                encoding="utf-8",
+            )
+            (warehouse / "observations.jsonl").write_text(
+                json.dumps({
+                    "asset_id": "major_reservoir:test",
+                    "metric_code": "effective_storage_pct",
+                    "observed_date": "2026-08-10",
+                    "value": 42.0,
+                }) + "\n",
+                encoding="utf-8",
+            )
+            (warehouse / "seasonal_references.jsonl").write_text("", encoding="utf-8")
+            (warehouse / "issues.jsonl").write_text("", encoding="utf-8")
+            counts = export_read_models(warehouse, output)
+            self.assertEqual(counts["assets"], 1)
+            self.assertTrue((output / "overview.json").exists())
+            self.assertTrue((output / "assets" / "major_reservoir__test.json").exists())
 
 
 class RegistryTests(unittest.TestCase):
