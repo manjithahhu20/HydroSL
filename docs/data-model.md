@@ -20,6 +20,7 @@ It contains:
 - `unit`
 - `raw_value`
 - `quality_flag`
+- `source_field`
 - source sheet, `gid`, section, and row
 - optional text value and source attributes
 
@@ -44,3 +45,14 @@ kept distinct. A raw source value is never replaced by a guessed numeric value.
 Yala and Maha comparison columns are stored as long-form seasonal references.
 The source column label remains available as `reference_period`; HydroSL does
 not invent dates that the source does not provide.
+
+Seasonal references also retain the source row's observed date, report date,
+source field, and attributes. This allows the dashboard to hide prefilled
+future rows by default while preserving them for source inspection.
+
+## Regional summaries
+
+Summaries retain both original row fields and normalized values for scope, tank
+count, gross storage, dead storage, present storage, effective storage, and
+effective storage percentage. The raw row remains available because the source
+uses multi-row headers and embeds notation beside totals.

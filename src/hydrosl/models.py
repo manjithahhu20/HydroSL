@@ -28,6 +28,7 @@ class MetricValue:
     unit: Optional[str]
     quality_flag: str = "observed"
     text_value: Optional[str] = None
+    source_field: Optional[str] = None
 
 
 @dataclass
@@ -84,6 +85,7 @@ class Observation:
     source_row: int
     season: Optional[str] = None
     text_value: Optional[str] = None
+    source_field: Optional[str] = None
     attributes: Dict[str, str] = field(default_factory=dict)
 
 
@@ -101,6 +103,10 @@ class SeasonalReference:
     source_section: str
     source_row: int
     season: Optional[str] = None
+    observed_date: Optional[date] = None
+    report_date: Optional[date] = None
+    source_field: Optional[str] = None
+    attributes: Dict[str, str] = field(default_factory=dict)
 
 
 @dataclass
@@ -111,6 +117,7 @@ class Summary:
     source_row: int
     scope: Optional[str]
     raw_fields: Dict[str, str] = field(default_factory=dict)
+    values: Dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass

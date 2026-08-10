@@ -177,6 +177,8 @@ def _metric_definition(field_name: str) -> Optional[Tuple[str, Optional[str], Op
         return "gross_extent_ac", "Ac", None
     if key.startswith("fsl"):
         return "fsl_mmsl", "mMSL", None
+    if key == "gross_storage":
+        return "gross_capacity_acft", "Acft", None
     if "gross_capacity" in key or key.startswith("gross_storage"):
         if "gross_storage" in key and "capacity" not in key:
             return "gross_storage_acft", "Acft", None
@@ -228,6 +230,7 @@ def _metric_value(field_name: str, raw_value: str) -> Optional[MetricValue]:
                 value=None,
                 unit=unit,
                 quality_flag="missing",
+                source_field=field_name,
             )
         if raw_text.lower() in {"#ref!", "#n/a", "#value!", "#div/0!"}:
             return MetricValue(
@@ -236,6 +239,7 @@ def _metric_value(field_name: str, raw_value: str) -> Optional[MetricValue]:
                 value=None,
                 unit=unit,
                 quality_flag="source_error",
+                source_field=field_name,
             )
         return MetricValue(
             code=code,
@@ -244,6 +248,7 @@ def _metric_value(field_name: str, raw_value: str) -> Optional[MetricValue]:
             unit=unit,
             quality_flag="observed_text",
             text_value=raw_text,
+            source_field=field_name,
         )
 
     value, quality = parse_number(raw_value)
@@ -257,6 +262,7 @@ def _metric_value(field_name: str, raw_value: str) -> Optional[MetricValue]:
         unit=unit,
         quality_flag=quality,
         text_value=text_value,
+        source_field=field_name,
     )
 
 
@@ -311,11 +317,17 @@ def _record_from_row(
         metric = _metric_value(field_name, raw_value)
         if metric is None:
             continue
+        if spec.name == "IDAT" and metric.code == "water_depth_ft":
+            metric.code = "water_depth_m"
+            metric.unit = "m"
         definition = _metric_definition(field_name)
         if definition and definition[2] is not None:
             seasonal_references[definition[2]] = metric
         else:
-            metrics[metric.code] = metric
+            metric_key = metric.code
+            if metric_key in metrics:
+                metric_key = f"{metric_key}__{canonical_header(field_name)}"
+            metrics[metric_key] = metric
         if metric.quality_flag in {"source_error", "textual_value"}:
             issues.append(
                 ParseIssue(
@@ -377,6 +389,44 @@ def _summary_header_index(rows: Sequence[Sequence[str]], start: int) -> Optional
     return None
 
 
+def _summary_values(row: Sequence[str]) -> Dict[str, object]:
+    """Normalize the stable positional columns in the source summary rows."""
+    names = (
+        "summary_number",
+        "scope",
+        "tank_count",
+        "gross_storage_acft",
+        "dead_storage_acft",
+        "present_storage_acft",
+        "effective_storage_acft",
+        "effective_storage_pct",
+    )
+    values: Dict[str, object] = {}
+    for index, name in enumerate(names):
+        raw = clean_cell(row[index]) if index < len(row) else ""
+        if name == "scope":
+            values[name] = raw or None
+            continue
+        if name == "summary_number":
+            parsed, _ = parse_number(raw)
+            values[name] = int(parsed) if parsed is not None else None
+            continue
+        parsed, quality = parse_number(raw)
+        values[name] = {
+            "value": parsed,
+            "raw_value": raw,
+            "quality_flag": quality,
+            "unit": (
+                "%"
+                if name == "effective_storage_pct"
+                else "count"
+                if name == "tank_count"
+                else "Acft"
+            ),
+        }
+    return values
+
+
 def _parse_summaries(
     spec: SheetSpec, rows: Sequence[Sequence[str]], start: int
 ) -> List[Summary]:
@@ -404,6 +454,7 @@ def _parse_summaries(
                     source_row=index + 1,
                     scope=scope or None,
                     raw_fields=fields,
+                    values=_summary_values(row),
                 )
             )
     return summaries
@@ -505,9 +556,36 @@ def parse_mixed_sheet(spec: SheetSpec, rows: Sequence[Sequence[str]]) -> ParsedS
 
     for position, (header_index, kind) in enumerate(headers_at):
         end = headers_at[position + 1][0] if position + 1 < len(headers_at) else len(rows)
-        headers = unique_headers(rows[header_index])
+        if kind == "small_tank":
+            headers = unique_headers(rows[header_index])
+            inline_headers = any(
+                "gross_capacity" in canonical_header(cell)
+                or "present_storage" in canonical_header(cell)
+                for cell in rows[header_index]
+            )
+            if not inline_headers:
+                fixed_headers = {
+                    0: "No.",
+                    1: "Mediaum Tank",
+                    2: "Division",
+                    4: "Gross Capacity (Acft)",
+                    5: "Dead Storage (Acft)",
+                    6: "FSL (mMSL)",
+                    7: "Gross Extent (ac)",
+                    8: "Present Storage (Acft)",
+                    12: "Division (source)",
+                    13: "District",
+                }
+                for index, header in fixed_headers.items():
+                    while len(headers) <= index:
+                        headers.append(f"unnamed_{len(headers) + 1}")
+                    headers[index] = header
+            data_start = header_index + 1 if inline_headers else header_index + 2
+        else:
+            headers = unique_headers(rows[header_index])
+            data_start = header_index + 1
         section = f"{kind}_{position + 1}"
-        for index in range(header_index + 1, end):
+        for index in range(data_start, end):
             row = rows[index]
             if _is_blank(row):
                 continue
@@ -604,6 +682,15 @@ def parse_idat_sheet(spec: SheetSpec, rows: Sequence[Sequence[str]]) -> ParsedSh
         )
         return parsed
     headers = unique_headers(rows[header_index])
+    first_data_row = next(
+        (row for row in rows[header_index + 1 :] if not _is_blank(row)), None
+    )
+    report_date = None
+    if first_data_row is not None:
+        report_date = _date_from_fields(
+            _fields_from_row(headers, first_data_row), None, slash_order="mdy"
+        )
+    parsed.report_date = report_date
     for index in range(header_index + 1, len(rows)):
         if _is_blank(rows[index]):
             continue
@@ -614,13 +701,11 @@ def parse_idat_sheet(spec: SheetSpec, rows: Sequence[Sequence[str]]) -> ParsedSh
             headers=headers,
             row=rows[index],
             asset_type=spec.asset_type or "major_reservoir",
-            report_date=None,
+            report_date=report_date,
         )
         if record is not None:
             parsed.records.append(record)
             parsed.issues.extend(issues)
-            if parsed.report_date is None:
-                parsed.report_date = record.observed_date
     return parsed
 
 
